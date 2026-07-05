@@ -15,6 +15,6 @@ class Node:
     zone: ZoneType = ZoneType.NORMAL | None
     cost: int = 1
     color: str = ""
-    max_drone: int = 1
+    max_drones: int = 1
     is_start: bool = False
     is_end: bool = False
