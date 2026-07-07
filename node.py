@@ -1,18 +1,12 @@
 from dataclasses import dataclass
-from enum import Enum
 
-class ZoneType(Enum):
-    NORMAL = "normal"
-    RESTRICTED = "restricted"
-    BLOCKED = "blocked"
-    PRIORITY = "priority"
 
 @dataclass(slots=True)
 class Node:
     name: str
     x: int
     y: int
-    zone: ZoneType = ZoneType.NORMAL | None
+    zone: str = "normal"
     cost: int = 1
     color: str = ""
     max_drones: int = 1
