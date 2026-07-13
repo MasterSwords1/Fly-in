@@ -9,11 +9,11 @@ class Parser():
 
     def __init__(self) -> None:
         self.patterns: list[str] = [
-            r"^nb_drones: (?P<nb_drones>\d{1,})$",
-            r"^start_hub: (?P<hub_name>\w+) (?P<x>\d{0,}) (?P<y>\d{0,})(?P<metadata>\s+\[(\s?\w+\=\w+\s?)?\])?$",
-            r"^end_hub: (?P<hub_name>\w+) (?P<x>\d{0,}) (?P<y>\d{0,})(?P<metadata> \[(\s?\w+\=\w+\s?)?\])?$",
-            r"^hub: (?P<hub_name>\w+) (?P<x>\d{0,}) (?P<y>\d{0,})(?P<metadata> \[(\s?\w+\=\w+\s?)?\])?$",
-            r"^connection: (?P<hubs>\w+\-\w+)(?P<metadata> \[(\s?\w+\=\w+\s?)?\])?$"
+            r"^nb_drones: (?P<nb_drones>\d+)$",
+            r"^start_hub: (?P<hub_name>\w+) (?P<x>-?\d+) (?P<y>-?\d+)(?P<metadata> \[(?:\s*\w+=\w+)*\s*\])?$",
+            r"^end_hub: (?P<hub_name>\w+) (?P<x>-?\d+) (?P<y>-?\d+)(?P<metadata> \[(?:\s*\w+=\w+)*\s*\])?$",
+            r"^hub: (?P<hub_name>\w+) (?P<x>-?\d+) (?P<y>-?\d+)(?P<metadata> \[(?:\s*\w+=\w+)*\s*\])?$",
+            r"^connection: (?P<hubs>\w+\-\w+)(?P<metadata> \[(?:\s*\w+=\w+)*\s*\])?$"
         ]
         self.init_drones: bool = False
         self.zoneTypes: list[str] = ["normal", "restricted", "priority", "blocked"]
@@ -28,9 +28,15 @@ class Parser():
     
     def extractMetadata(self, line: str, index: int, g_id: int) -> dict[str, str]:
         metadata: dict[str, str] = {}
-        data: list[str] = re.match(self.patterns[index], line).group(g_id).replace("[", "").replace("]", "").strip().split(" ")
-        for d in data:
-            metadata[d.split("=")[0]] = d.split("=")[1]
+        # Extract the metadata string, e.g., " [color=red max_drones=1]"
+        metadata_string = re.match(self.patterns[index], line).group(g_id)
+        if metadata_string:
+            # Remove brackets and strip whitespace
+            clean_metadata_string = metadata_string.strip()[1:-1].strip()
+            # Find all key=value pairs
+            pairs = re.findall(r'(\w+)=(\w+)', clean_metadata_string)
+            for key, value in pairs:
+                metadata[key] = value
         return metadata
 
     def createHub(self, line: str, index: int) -> Node:
@@ -100,17 +106,37 @@ class Parser():
 
 
     def parseFile(self, graph: Graph, filename: str) -> None:
+        lines_to_parse: list[str] = []
+        connection_lines: list[str] = []
         try:
             with open(filename, "r") as file:
-                i: int = 0
                 for line in file:
                     line = line.strip()
                     if line.startswith("#") or line == "":
                         continue
-                    if i == 0 and not line.startswith("nb_drone"):
-                        raise Exception("file must start with nb_drones: <number_of_drones>")
+                    lines_to_parse.append(line)
+
+            # First pass: Parse nb_drones, hubs, start_hub, and end_hub
+            if not re.search(self.patterns[0], lines_to_parse[0]):
+                raise Exception("file must start with nb_drones: <number_of_drones>")
+            self.createDrones(lines_to_parse[0])
+            graph.drones = self.drones
+
+            for line in lines_to_parse[1:]:
+                if re.search(self.patterns[1], line) or \
+                   re.search(self.patterns[2], line) or \
+                   re.search(self.patterns[3], line):
+                    # Process hubs (start_hub, end_hub, hub)
                     self.parseLine(graph, line)
-                    i += 1
+                elif re.search(self.patterns[4], line):
+                    # Store connection lines for the second pass
+                    connection_lines.append(line)
+                else:
+                    raise Exception(f"Unrecognized line format: {line}")
+            
+            # Second pass: Process connection lines
+            for line in connection_lines:
+                self.parseLine(graph, line)
 
         except Exception as e:
             print(f"Error: {e}")

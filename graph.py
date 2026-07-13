@@ -9,6 +9,7 @@ class Graph():
         self.drones: list[Drone] = []
         self.startNode: Node | None = None
         self.endNode: Node | None = None
+        self.connections: set[tuple[str, str]] = set()
     
     def addNode(self, node: Node) -> None:
         if self.nodes.get(node.name, None):
@@ -32,6 +33,13 @@ class Graph():
             raise Exception(f"Connection start hub name does not exist: {edge.start}")
         if not self.nodes.get(edge.end, None):
             raise Exception(f"Connection end hub name does not exist: {edge.end}")
+
+        # Canonicalize the connection names to handle a-b and b-a as duplicates
+        canonical_connection: tuple[str, str] = tuple(sorted((edge.start, edge.end)))
+        if canonical_connection in self.connections:
+            raise Exception(f"Duplicate connection found: {edge.start}-{edge.end}")
+        
+        self.connections.add(canonical_connection)
         edge.startNode = self.nodes.get(edge.start, None)
         edge.endNode = self.nodes.get(edge.end, None)
         self.edges.append(edge)

@@ -3,7 +3,6 @@ from parser import Parser
 
 def main():
     print("hh")
-    breakpoint()
     graph: Graph = Graph();
     parser: Parser = Parser()
     parser.parseFile(graph, "./maps/challenger/01_the_impossible_dream.txt")
