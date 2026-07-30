@@ -1,0 +1,12 @@
+# Custom Edge Case 3: All intermediate zones are restricted (2-turn cost)
+# Tests that the solver correctly handles multi-turn transit
+nb_drones: 3
+
+start_hub: start 0 0 [color=green]
+hub: zone_a 1 0 [zone=restricted color=orange]
+hub: zone_b 2 0 [zone=restricted color=orange]
+end_hub: goal 3 0 [color=red]
+
+connection: start-zone_a
+connection: zone_a-zone_b
+connection: zone_b-goal

@@ -1,0 +1,17 @@
+# Custom Edge Case 6: Priority zones should be preferred over normal zones
+# Two parallel paths: one through priority zones, one through normal
+nb_drones: 3
+
+start_hub: start 0 1 [color=green]
+hub: prio_a 1 2 [zone=priority color=purple]
+hub: prio_b 2 2 [zone=priority color=purple]
+hub: norm_a 1 0 [color=blue]
+hub: norm_b 2 0 [color=blue]
+end_hub: goal 3 1 [color=red]
+
+connection: start-prio_a
+connection: prio_a-prio_b
+connection: prio_b-goal
+connection: start-norm_a
+connection: norm_a-norm_b
+connection: norm_b-goal

@@ -1,0 +1,10 @@
+# Custom Edge Case 2: 5 drones forced through a single bottleneck node
+# The bottleneck (max_drones=1) creates a queueing scenario
+nb_drones: 5
+
+start_hub: start 0 1 [color=green]
+hub: bottleneck 1 1 [color=orange]
+end_hub: goal 2 1 [color=red]
+
+connection: start-bottleneck
+connection: bottleneck-goal

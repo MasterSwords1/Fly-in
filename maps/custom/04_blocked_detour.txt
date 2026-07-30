@@ -1,0 +1,15 @@
+# Custom Edge Case 4: Blocked zone forces a detour
+# Shortest path start->blocked->goal is invalid; must use detour
+nb_drones: 3
+
+start_hub: start 0 1 [color=green]
+hub: blocked_zone 1 1 [zone=blocked color=gray]
+hub: detour_a 1 2 [color=blue]
+hub: detour_b 2 2 [color=blue]
+end_hub: goal 2 1 [color=red]
+
+connection: start-blocked_zone
+connection: blocked_zone-goal
+connection: start-detour_a
+connection: detour_a-detour_b
+connection: detour_b-goal

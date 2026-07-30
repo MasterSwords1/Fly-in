@@ -1,0 +1,12 @@
+# Custom Edge Case 5: High capacity nodes and connections
+# 10 drones, high capacity allows many simultaneous moves
+nb_drones: 10
+
+start_hub: start 0 0 [color=green]
+hub: wide1 1 0 [color=blue max_drones=5]
+hub: wide2 2 0 [color=blue max_drones=5]
+end_hub: goal 3 0 [color=red]
+
+connection: start-wide1 [max_link_capacity=5]
+connection: wide1-wide2 [max_link_capacity=5]
+connection: wide2-goal [max_link_capacity=5]

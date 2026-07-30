@@ -1,3 +1,7 @@
 .env
-subject.txt
+subject.pdf
 __pycache__
+parsing_constraints.txt
+subject_text.txt
+.mypy_cache
+.gitignore
