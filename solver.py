@@ -128,12 +128,13 @@ class OrToolsSolver:
 
         # Dynamic lower bound calculation
         import math
-        min_t = math.ceil(num_drones / c_out) + dist
+        # If c_out is 1, drones must leave one by one. 
+        # First batch (size c_out) takes 'dist' turns to arrive.
+        # Total turns = ceil(num_drones / c_out) + dist - 1
+        min_t = math.ceil(num_drones / c_out) + dist - 1
 
-        # Horizon search steps
-        t_horizons = [min_t, min_t + 4, min_t + 10, min_t + 18, min_t + 30]
-
-        for T in t_horizons:
+        # Check every time step from min_t to find absolute minimum
+        for T in range(min_t, min_t + 61): # Try up to 60 additional turns
             # Forward Reachability
             reach_fwd = {0: {start_node}}
             for t in range(1, T + 1):
@@ -165,7 +166,7 @@ class OrToolsSolver:
                 continue
 
             # Choose solver strategy
-            if num_drones <= 6:
+            if num_drones <= 8: # Slightly increased threshold for global
                 # Global optimal path routing
                 paths = self._solve_global(
                     T, start_node, end_node, num_drones, physical_nodes,
@@ -299,7 +300,14 @@ class OrToolsSolver:
 
         max_turn = model.NewIntVar(0, T, "max_turn")
         model.AddMaxEquality(max_turn, arrival_times)
-        model.Minimize(max_turn)
+        
+        # Primary objective: minimize max arrival time
+        # Secondary objective: minimize sum of arrival times weighted by drone index
+        # to break symmetries and prefer D1 moving before D2, etc.
+        total_arrival_weight = sum(
+            arr_t * (num_drones - d) for d, arr_t in enumerate(arrival_times)
+        )
+        model.Minimize(max_turn * 1000000 + total_arrival_weight)
 
         sat_solver: Any = cp_model.CpSolver()
         sat_solver.parameters.max_time_in_seconds = 5.0

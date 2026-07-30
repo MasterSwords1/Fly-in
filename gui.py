@@ -91,7 +91,7 @@ class SimplePathfinder:
         # We trace its positions at each time step
         drone_paths: List[List[str]] = []
         for i in range(num_drones):
-            d_path: List[str] = []
+            d_path: List[str] = [path[0]]
             # Wait at start node until departure
             for _ in range(i):
                 d_path.append(path[0])
