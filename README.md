@@ -33,12 +33,12 @@ Fly-in is an optimized, object-oriented multi-agent drone routing and simulation
 
 ## Description
 
-The objective of **Fly-in** is to navigate a fleet of $N$ drones through a graph-like network of zones to minimize total turns. Each zone has attributes defining movement cost and capacity:
+The objective of **Fly-in** is to navigate a fleet of N drones through a network of zones to minimize total turns. Each zone has attributes defining movement cost and capacity:
 - **Normal Zone**: 1-turn movement cost (default).
 - **Restricted Zone**: 2-turn movement cost. During transit, the drone occupies the connection and must land in the destination zone on the subsequent turn.
 - **Priority Zone**: 1-turn movement cost, prioritized during pathfinding.
 - **Blocked Zone**: Inaccessible hazard zone through which paths cannot pass.
-- **Capacities**: Zones (`max_drones`) and connections (`max_link_capacity`) enforce simultaneous occupancy limits. Drones moving out of a zone during turn $t$ free up space for drones entering at turn $t$.
+- **Capacities**: Zones (`max_drones`) and connections (`max_link_capacity`) enforce simultaneous occupancy limits. Drones moving out of a zone during turn `t` free up space for drones entering at turn `t`.
 
 ---
 
@@ -60,17 +60,17 @@ The project is built around clean, object-oriented design and static type safety
 
 ### Prerequisites
 - Python 3.10+ (recommended: Python 3.12)
-- [`uv`](https://docs.astral.sh/uv/) package manager (or standard `pip`)
+- [`uv`](https://docs.astral.sh/uv/) package manager
 
 ### Installation with UV
-Create the virtual environment and install all dependencies:
+Create the virtual environment and install dependencies directly from `pyproject.toml`:
 ```bash
 make install
 ```
 Alternatively, using `uv` directly:
 ```bash
 uv venv --python 3.12 .venv
-uv pip install -r requirements.txt
+uv pip install -e .
 ```
 
 ### Running the Simulation (CLI Mode)
@@ -98,7 +98,7 @@ The included [`Makefile`](Makefile) automates all project workflows:
 - `make install`: Provisions `.venv` and installs dependencies via `uv`.
 - `make run`: Executes the simulation on the baseline map.
 - `make debug`: Runs the simulation in step-by-step debug mode with Python `pdb`.
-- `make clean`: Cleans up bytecode caches (`__pycache__`, `.mypy_cache`, `.pytest_cache`).
+- `make clean`: Cleans up bytecode caches (`__pycache__`, `.mypy_cache`, `.pytest_cache`, `*.egg-info`).
 - `make lint`: Executes `flake8 .` and `mypy .` with mandatory type-checking flags.
 - `make lint-strict`: Executes strict verification (`flake8 .` and `mypy . --strict`).
 
@@ -109,17 +109,17 @@ The included [`Makefile`](Makefile) automates all project workflows:
 ### Space-Time Heuristic Planning
 Drone routing in Fly-in is modeled as a **Multi-Agent Path Finding (MAPF)** problem using space-time reservation planning:
 1. **Reverse Heuristic Distance Mapping**: Computes reverse cost-to-goal heuristics from the `end_hub` using breadth-first search and priority incentives.
-2. **Iterative Horizon Search**: The solver computes a lower-bound minimum time horizon $T$ based on network distance and bottleneck bandwidths, then finds the minimum feasible global horizon.
-3. **Space-Time A\* Search with Dynamic Reservation Tables**:
-   - Each drone searches for an optimal trajectory in space-time coordinates $(s, t)$ where $s \in V \cup \text{TransitEdges}$ and $t \in [0, T]$.
-   - Simultaneous movements are scheduled: when a drone leaves zone $u$ at turn $t$, $u$'s capacity is freed for another drone entering at turn $t$.
+2. **Iterative Horizon Search**: The solver computes a lower-bound minimum time horizon `T` based on network distance and bottleneck bandwidths, then finds the minimum feasible global horizon.
+3. **Space-Time A* Search with Dynamic Reservation Tables**:
+   - Each drone searches for an optimal trajectory in space-time coordinates `(state, turn)` where `state` is either a physical zone or a transit edge, and `turn` ranges from 0 to `T`.
+   - Simultaneous movements are scheduled: when a drone leaves zone `u` at turn `t`, zone `u`'s capacity is freed for another drone entering at turn `t`.
    - Priority zones are prioritized via negative heuristic cost weights.
-   - Restricted zones are modeled with an intermediate `transit` state $(u, v)$ occupying edge capacity across $t \to t+1$, transitioning into $v$ at $t+2$.
+   - Restricted zones are modeled with an intermediate `transit` state `("transit", u, v)` occupying edge capacity across turn `t -> t + 1`, transitioning into zone `v` at turn `t + 2`.
 
 ### Handling Capacities & Multi-Turn Restricted Zones
-- **Zone Occupancy**: Maintained via `node_reservations[(zone, t)]`.
-- **Edge Bandwidth**: Bidirectional link limits tracked via `edge_reservations[(min(u, v), max(u, v), t)]`.
-- **Start and End Hubs**: The `start_hub` can hold all drones at $t=0$ and allow waiting, while `end_hub` absorbs arriving drones immediately.
+- **Zone Occupancy**: Maintained via `node_reservations[(zone, turn)]`.
+- **Edge Bandwidth**: Bidirectional link limits tracked via `edge_reservations[(min(u, v), max(u, v), turn)]`.
+- **Start and End Hubs**: The `start_hub` can hold all drones at turn 0 and allow waiting, while `end_hub` absorbs arriving drones immediately.
 
 ### Simulation Engine & Output Generation
 The [`SimulationEngine`](solver.py) processes the computed paths into compliant simulation output:
@@ -128,63 +128,74 @@ The [`SimulationEngine`](solver.py) processes the computed paths into compliant 
 - Verified to produce turn sequences adhering strictly to subject requirements.
 
 ### Time & Space Complexity
-- **Time Complexity**: For $N$ drones, $|V|$ zones, $|E|$ connections, and horizon $T$, state exploration per drone is bounded by $\mathcal{O}(T \cdot (|V| + |E|) \log(T \cdot |V|))$. Total routing executes in $\mathcal{O}(N \cdot T \cdot (|V| + |E|) \log(T \cdot |V|))$, running in under **250ms** even for the 25-drone Challenger map.
-- **Space Complexity**: Space-time reservation tables scale linearly with $\mathcal{O}(N \cdot T + T \cdot |E|)$, maintaining minimal memory footprint (under 30 MB RAM).
+- **Time Complexity**: For `N` drones, `|V|` zones, `|E|` connections, and horizon `T`, state exploration per drone is bounded by `O(T * (|V| + |E|) * log(T * |V|))`. Total routing executes in `O(N * T * (|V| + |E|) * log(T * |V|))`, running in under **250 ms** even for the 25-drone Challenger map.
+- **Space Complexity**: Space-time reservation tables scale linearly with `O(N * T + T * |E|)`, maintaining minimal memory footprint (under 30 MB RAM).
 
 ### Performance Benchmarks
 Fly-in outperforms all subject performance benchmark targets:
 
 | Map Category | Map Name | Fleet Size | Subject Target | Fly-in Result | Status |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **Easy** | `01_linear_path.txt` | 2 drones | $\le 6$ turns | **4 turns** | 🏆 Beats Target |
-| **Easy** | `02_simple_fork.txt` | 4 drones | $\le 8$ turns | **4 turns** | 🏆 Beats Target |
-| **Easy** | `03_basic_capacity.txt` | 4 drones | $\le 6$ turns | **4 turns** | 🏆 Beats Target |
-| **Medium** | `01_dead_end_trap.txt` | 5 drones | $\le 12$ turns | **8 turns** | 🏆 Beats Target |
-| **Medium** | `02_circular_loop.txt` | 6 drones | $\le 15$ turns | **15 turns** | ✅ Meets Target |
-| **Medium** | `03_priority_puzzle.txt` | 5 drones | $\le 12$ turns | **7 turns** | 🏆 Beats Target |
-| **Hard** | `01_maze_nightmare.txt` | 8 drones | $\le 30$ turns | **13 turns** | 🏆 Beats Target |
-| **Hard** | `02_capacity_hell.txt` | 12 drones | $\le 35$ turns | **16 turns** | 🏆 Beats Target |
-| **Hard** | `03_ultimate_challenge.txt` | 15 drones | $\le 45$ turns | **26 turns** | 🏆 Beats Target |
-| **Challenger** | `01_the_impossible_dream.txt` | 25 drones | Record: 45 turns | **43 turns** | 🥇 **Beats Record** |
+| **Easy** | `01_linear_path.txt` | 2 drones | <= 6 turns | **4 turns** | Beats Target |
+| **Easy** | `02_simple_fork.txt` | 4 drones | <= 8 turns | **4 turns** | Beats Target |
+| **Easy** | `03_basic_capacity.txt` | 4 drones | <= 6 turns | **4 turns** | Beats Target |
+| **Medium** | `01_dead_end_trap.txt` | 5 drones | <= 12 turns | **8 turns** | Beats Target |
+| **Medium** | `02_circular_loop.txt` | 6 drones | <= 15 turns | **15 turns** | Meets Target |
+| **Medium** | `03_priority_puzzle.txt` | 5 drones | <= 12 turns | **7 turns** | Beats Target |
+| **Hard** | `01_maze_nightmare.txt` | 8 drones | <= 30 turns | **13 turns** | Beats Target |
+| **Hard** | `02_capacity_hell.txt` | 12 drones | <= 35 turns | **16 turns** | Beats Target |
+| **Hard** | `03_ultimate_challenge.txt` | 15 drones | <= 45 turns | **26 turns** | Beats Target |
+| **Challenger** | `01_the_impossible_dream.txt` | 25 drones | Record: 45 turns | **43 turns** | **Beats Record** |
 
 ---
 
 ## Constraint Programming & OR-Tools in Drone Routing
 
 ### What is Constraint Programming (CP)?
-**Constraint Programming (CP)** is a declarative paradigm for solving combinatorial search and optimization problems. Instead of specifying imperative step-by-step algorithms, a problem is formulated as a set of:
-1. **Decision Variables**: Mathematical variables representing choices (e.g., location of drone $d$ at turn $t$).
-2. **Variable Domains**: Finite sets of feasible values each variable can take.
-3. **Constraints**: Logical or algebraic relationships restricting variable combinations (e.g., mutual exclusion, capacity bounds, flow balance).
+**Constraint Programming (CP)** is a declarative programming paradigm designed for solving complex combinatorial search and optimization problems. Instead of writing imperative, step-by-step algorithms, a problem is formulated as a model consisting of:
+1. **Decision Variables**: Variables representing choices to be made (e.g., the exact zone location of each drone at each turn).
+2. **Variable Domains**: The finite set of possible values each variable can take (e.g., all valid hubs in the graph).
+3. **Constraints**: Logical or mathematical restrictions that define which combinations of values are allowed (e.g., zone capacities, connection limits, non-collision rules).
 
-A constraint solver searches the domain space using **constraint propagation** (pruning values that violate constraints) and **backtracking search** with domain heuristics.
+A constraint solver searches the domain space using **constraint propagation** (reducing possible domain values based on rules) combined with **backtracking search** and heuristics.
 
 ### Google OR-Tools & CP-SAT Solver
-[Google OR-Tools](https://developers.google.com/optimization) is an open-source suite for combinatorial optimization. Its flagship solver, **CP-SAT**, blends:
-- **SAT (Boolean Satisfiability)**: Solves large-scale clause satisfaction through Conflict-Driven Clause Learning (CDCL).
-- **Integer Linear Programming (ILP)**: Employs cutting planes and LP relaxations to guide global optimization bounds.
-- **Lazy Clause Generation**: Dynamically translates high-level constraint violations into Boolean SAT clauses.
+[Google OR-Tools](https://developers.google.com/optimization) is an open-source software suite for combinatorial optimization. Its flagship solver, **CP-SAT**, combines:
+- **Boolean Satisfiability (SAT)**: Solving logical clause satisfaction using Conflict-Driven Clause Learning (CDCL).
+- **Integer Linear Programming (ILP)**: Applying cutting planes and continuous relaxations to guide global bounds.
+- **Lazy Clause Generation**: Converting high-level constraints (like capacity limits) into SAT clauses on the fly as conflicts are discovered.
 
 ### Mathematical Formulation of Multi-Drone Routing
-In a CP-SAT model over time horizon $T$:
-- **Binary Variables**: Let $x_{d, t, s} \in \{0, 1\}$ indicate if drone $d$ occupies state $s$ at time step $t$.
-- **Flow Conservation**:
-  $$\sum_{s' \in \text{Out}(s)} x_{d, t+1, s'} \ge x_{d, t, s} \quad \forall d, t, s$$
-- **Node Capacity Constraint**:
-  $$\sum_{d=1}^N x_{d, t, u} \le \text{max\_drones}(u) \quad \forall t, u \notin \{\text{start}, \text{end}\}$$
-- **Edge Capacity Constraint**:
-  $$\sum_{d=1}^N \text{crossing}(d, t, u, v) \le \text{max\_link\_capacity}(u, v) \quad \forall t, (u, v) \in E$$
-- **Objective Function**:
-  $$\min \max_{d} \left(\text{arrival\_time}(d)\right)$$
+In a constraint programming formulation over a discrete time horizon `T`:
+
+```text
+1. Decision Variables:
+   x(drone, turn, state) = 1 if the drone occupies that state at that turn, else 0
+
+2. Flow Transition:
+   For every drone, turn t, and state s:
+   Sum(x(drone, t - 1, prev_state) for all valid incoming states) >= x(drone, t, s)
+
+3. Zone Capacity Constraint:
+   For every turn t and zone u (excluding start and goal):
+   Sum(x(drone, t, u) for all drones) <= max_drones(u)
+
+4. Edge Bandwidth Constraint:
+   For every turn t and bidirectional connection (u, v):
+   Sum(crossing(drone, t, u, v) for all drones) <= max_link_capacity(u, v)
+
+5. Optimization Objective:
+   Minimize: max(arrival_turn of all drones)
+```
 
 ### Space-Time Reservation vs. CP-SAT Approaches
 | Metric / Aspect | Space-Time Reservation (This Project) | CP-SAT Solver (OR-Tools) |
 | :--- | :--- | :--- |
-| **Dependencies** | Pure Python Standard Library (0 dependencies) | Heavy external native library (`ortools`) |
-| **42 Subject Compliance** | $100\%$ compliant, custom, fully explainable | Often scrutinized under graph-library rules |
-| **Execution Speed** | Ultra-fast ($< 250\text{ ms}$ for all maps) | Variable (requires SAT compilation & search) |
-| **Scalability** | $\mathcal{O}(N \cdot T \cdot \|V\|)$ polynomial scaling | Exponential worst-case, pruned by heuristics |
-| **Code Readability** | Structured, transparent OOP logic | Black-box solver constraints and variables |
+| **Dependencies** | Pure Python Standard Library (0 external libraries) | Heavy external native library (`ortools`) |
+| **42 Subject Compliance** | 100% compliant, custom, transparent & explainable | Prohibited under 42 external graph logic rules |
+| **Execution Speed** | Ultra-fast (< 250 ms across all maps) | Variable (requires SAT compilation & search) |
+| **Scalability** | Polynomial scaling O(N * T * \|V\|) | Exponential worst-case, pruned by heuristics |
+| **Code Readability** | Clean, modular, human-readable OOP logic | Abstract solver constraint variable definitions |
 
 ---
 

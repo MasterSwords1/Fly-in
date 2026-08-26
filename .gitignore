@@ -25,3 +25,4 @@ venv/
 # Project generated artifacts
 graph.dot
 graph.png
+*.egg-info/

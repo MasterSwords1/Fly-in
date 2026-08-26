@@ -11,8 +11,8 @@ all: install run
 
 install:
 	@echo "Setting up virtual environment and installing dependencies with uv..."
-	@$(UV) venv --python 3.12 .venv
-	@$(UV) pip install -r requirements.txt
+	@$(UV) venv --python 3.12 --allow-existing .venv
+	@$(UV) pip install -e .
 
 run:
 	@if [ ! -f $(PYTHON) ]; then \
@@ -30,7 +30,7 @@ debug:
 
 clean:
 	@echo "Cleaning temporary build files and caches..."
-	@rm -rf __pycache__ .mypy_cache .pytest_cache
+	@rm -rf __pycache__ .mypy_cache .pytest_cache *.egg-info
 	@find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	@find . -type f -name "*.pyc" -delete 2>/dev/null || true
 	@find . -type f -name "*.pyo" -delete 2>/dev/null || true
