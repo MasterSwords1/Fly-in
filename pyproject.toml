@@ -6,6 +6,7 @@ authors = [{ name = "ariyad", email = "ariyad@student.42.fr" }]
 requires-python = ">=3.10"
 dependencies = [
     "pygame>=2.5.0",
+    "ortools>=9.8.0",
     "flake8>=7.0.0",
     "mypy>=1.10.0",
 ]
