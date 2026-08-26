@@ -1,0 +1,27 @@
+[project]
+name = "fly-in"
+version = "1.5.0"
+description = "Autonomous Drone Fleet Pathfinding & Scheduling Simulation"
+authors = [{ name = "ariyad", email = "ariyad@student.42.fr" }]
+requires-python = ">=3.10"
+dependencies = [
+    "pygame>=2.5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "flake8>=7.0.0",
+    "mypy>=1.10.0",
+]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_ignores = true
+ignore_missing_imports = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+
+[tool.flake8]
+max-line-length = 120
+exclude = [".venv", "__pycache__", ".mypy_cache"]

@@ -1,15 +1,27 @@
+# Python artifacts
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+
+# Environments
 .venv/
-venv/
 env/
-.env
-.vscode/
-.idea/
+venv/
+.env/
+
+# Type checking & testing caches
 .mypy_cache/
-graph.png
+.pytest_cache/
+.coverage
+
+# Editor & OS files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project generated artifacts
 graph.dot
-subject.pdf
-parsing_constraints.txt
-subject_text.txt
+graph.png
